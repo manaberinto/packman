@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Mini Maze Game</title>
+
+
+<style>
+
+/* =========================
+   全体
+   ========================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    background: #050505;
+
+    color: white;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    text-align: center;
+
+}
+
+
+/* タイトル */
+
+h1 {
+
+    color: #ffd900;
+
+    margin: 15px 0 5px;
+
+    font-size: 30px;
+
+}
+
+
+/* =========================
+   情報表示
+   ========================= */
+
+#gameInfo {
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 30px;
+
+    margin: 10px;
+
+    font-size: 18px;
+
+}
+
+#score {
+
+    color: #ffd900;
+
+}
+
+#highScore {
+
+    color: #00ffff;
+
+}
+
+#life {
+
+    color: #ff5555;
+
+}
+
+
+/* =========================
+   ゲーム画面
+   ========================= */
+
+#game {
+
+    width: 500px;
+
+    height: 500px;
+
+    max-width: 95vw;
+
+    height: auto;
+
+    border: 3px solid #333;
+
+    background: black;
+
+}
+
+
+/* =========================
+   ボタン
+   ========================= */
+
+#startButton {
+
+    background: #ffd900;
+
+    border: none;
+
+    border-radius: 8px;
+
+    padding: 12px 35px;
+
+    margin: 15px;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+}
+
+#startButton:hover {
+
+    background: #fff000;
+
+}
+
+
+/* =========================
+   スマホ操作
+   ========================= */
+
+#controls {
+
+    margin-top: 5px;
+
+}
+
+.control {
+
+    width: 65px;
+
+    height: 55px;
+
+    margin: 3px;
+
+    border-radius: 8px;
+
+    border: 2px solid #555;
+
+    background: #222;
+
+    color: white;
+
+    font-size: 25px;
+
+}
+
+.control:active {
+
+    background: #555;
+
+}
+
+.row {
+
+    display: flex;
+
+    justify-content: center;
+
+}
+
+
+/* =========================
+   説明
+   ========================= */
+
+#message {
+
+    min-height: 25px;
+
+    margin: 5px;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<h1>🎮 MINI MAZE</h1>
+
+
+<div id="gameInfo">
+
+    <div>
+        SCORE:
+        <span id="score">0</span>
+    </div>
+
+    <div>
+        HIGH:
+        <span id="highScore">0</span>
+    </div>
+
+    <div>
+        LIFE:
+        <span id="life">❤️❤️❤️</span>
+    </div>
+
+</div>
+
+
+<div id="message">
+    STARTボタンを押してください
+</div>
+
+
+<canvas
+    id="game"
+    width="500"
+    height="500">
+</canvas>
+
+
+<br>
+
+
+<button id="startButton">
+    START
+</button>
+
+
+<!-- =========================
+     スマホ用操作
+     ========================= -->
+
+<div id="controls">
+
+    <div class="row">
+
+        <button
+            class="control"
+            data-dir="up">
+            ▲
+        </button>
+
+    </div>
+
+
+    <div class="row">
+
+        <button
+            class="control"
+            data-dir="left">
+            ◀
+        </button>
+
+        <button
+            class="control"
+            data-dir="down">
+            ▼
+        </button>
+
+        <button
+            class="control"
+            data-dir="right">
+            ▶
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+/* =====================================================
+   基本設定
+   ===================================================== */
+
+
+const canvas =
+    document.getElementById("game");
+
+const ctx =
+    canvas.getContext("2d");
+
+
+/*
+    1マス25px
+
+    20 × 20 = 500 × 500
+*/
+
+const TILE = 25;
+
+
+/* =====================================================
+   プレイヤー画像
+   ===================================================== */
+
+
+/*
+    GitHubに置いた
+
+    player.png
+
+    を読み込む
+*/
+
+const playerImage = new Image();
+
+playerImage.src = "player.png";
+
+
+/* =====================================================
+   マップ
+   ===================================================== */
+
+
+/*
+
+    # = 壁
+    . = ドット
+    o = パワーアイテム
+    - = 敵の部屋
+
+*/
+
+const map = [
+
+"####################",
+
+"#o........##........o#",
+
+"#.####.###..###.####.#",
+
+"#....................#",
+
+"#.####.##....##.####.#",
+
+"#......##....##......#",
+
+"######.##....##.######",
+
+"     #.##....##.#     ",
+
+"######.##....##.######",
+
+"#..............o.....#",
+
+"#.####.##....##.####.#",
+
+"#....#.##....##.#....#",
+
+"####.#.##....##.#.####",
+
+"#....#............#..#",
+
+"#.####.##....##.####.#",
+
+"#....................#",
+
+"#.####.###..###.####.#",
+
+"#o..................o#",
+
+"#....................#",
+
+"####################"
+
+];
+
+
+/*
+   上のマップに空白があるため、
+   画面上では壁として扱う
+*/
+
+
+/* =====================================================
+   プレイヤー
+   ===================================================== */
+
+let player = {
+
+    x: 10,
+
+    y: 15,
+
+    dx: 0,
+
+    dy: 0,
+
+    nextDx: 0,
+
+    nextDy: 0
+
+};
+
+
+/* =====================================================
+   敵
+   ===================================================== */
+
+let enemies = [
+
+    {
+        x: 9,
+        y: 9,
+        color: "#ff3333",
+        dx: 1,
+        dy: 0
+    },
+
+    {
+        x: 10,
+        y: 9,
+        color: "#ff77ff",
+        dx: -1,
+        dy: 0
+    },
+
+    {
+        x: 9,
+        y: 10,
+        color: "#00ffff",
+        dx: 0,
+        dy: 1
+    },
+
+    {
+        x: 10,
+        y: 10,
+        color: "#ff9900",
+        dx: 0,
+        dy: -1
+    }
+
+];
+
+
+/* =====================================================
+   ゲーム状態
+   ===================================================== */
+
+let score = 0;
+
+let lives = 3;
+
+let powerTime = 0;
+
+let gameRunning = false;
+
+let gameOver = false;
+
+let clear = false;
+
+
+/*
+   敵を食べたときの得点
+*/
+
+let enemyScore = 200;
+
+
+/* =====================================================
+   ハイスコア
+   ===================================================== */
+
+let highScore =
+    Number(
+        localStorage.getItem(
+            "miniMazeHighScore"
+        )
+    ) || 0;
+
+
+document
+    .getElementById("highScore")
+    .textContent = highScore;
+
+
+/* =====================================================
+   効果音
+   ===================================================== */
+
+
+/*
+   Web Audio APIを使って
+   簡単な音を作る
+*/
+
+let audioContext;
+
+
+function playSound(frequency, duration) {
+
+    try {
+
+        if (!audioContext) {
+
+            audioContext =
+                new AudioContext();
+
+        }
+
+
+        const oscillator =
+            audioContext.createOscillator();
+
+        const gain =
+            audioContext.createGain();
+
+
+        oscillator.frequency.value =
+            frequency;
+
+
+        oscillator.connect(gain);
+
+        gain.connect(
+            audioContext.destination
+        );
+
+
+        oscillator.start();
+
+
+        gain.gain.exponentialRampToValueAtTime(
+
+            0.001,
+
+            audioContext.currentTime +
+            duration
+
+        );
+
+
+        oscillator.stop(
+
+            audioContext.currentTime +
+            duration
+
+        );
+
+    }
+
+    catch (e) {
+
+        /*
+           音が使えない環境でも
+           ゲーム自体は動かす
+        */
+
+    }
+
+}
+
+
+/* =====================================================
+   壁判定
+   ===================================================== */
+
+
+function isWall(x, y) {
+
+    /*
+       マップ外
+    */
+
+    if (
+        y < 0 ||
+        y >= map.length ||
+        x < 0 ||
+        x >= map[y].length
+    ) {
+
+        return true;
+
+    }
+
+
+    /*
+       空白も壁扱い
+    */
+
+    if (
+        map[y][x] === " " ||
+        map[y][x] === "#"
+    ) {
+
+        return true;
+
+    }
+
+
+    return false;
+
+}
+
+
+/* =====================================================
+   ドットの初期化
+   ===================================================== */
+
+
+/*
+   ドットを食べたか管理する配列
+
+   true = まだある
+   false = 食べた
+*/
+
+let dots = [];
+
+
+function resetDots() {
+
+    dots = [];
+
+    for (
+        let y = 0;
+        y < map.length;
+        y++
+    ) {
+
+        dots[y] = [];
+
+        for (
+            let x = 0;
+            x < map[y].length;
+            x++
+        ) {
+
+            dots[y][x] =
+                map[y][x] === "." ||
+                map[y][x] === "o";
+
+        }
+
+    }
+
+
+    /*
+       プレイヤーの最初の場所には
+       ドットを置かない
+    */
+
+    dots[player.y][player.x] = false;
+
+}
+
+
+/* =====================================================
+   プレイヤーの初期位置
+   ===================================================== */
+
+function resetPlayer() {
+
+    player.x = 10;
+
+    player.y = 15;
+
+    player.dx = 0;
+
+    player.dy = 0;
+
+    player.nextDx = 0;
+
+    player.nextDy = 0;
+
+}
+
+
+/* =====================================================
+   敵の初期位置
+   ===================================================== */
+
+function resetEnemies() {
+
+    enemies[0].x = 9;
+    enemies[0].y = 9;
+
+    enemies[1].x = 10;
+    enemies[1].y = 9;
+
+    enemies[2].x = 9;
+    enemies[2].y = 10;
+
+    enemies[3].x = 10;
+    enemies[3].y = 10;
+
+
+    enemies[0].dx = 1;
+    enemies[0].dy = 0;
+
+    enemies[1].dx = -1;
+    enemies[1].dy = 0;
+
+    enemies[2].dx = 0;
+    enemies[2].dy = 1;
+
+    enemies[3].dx = 0;
+    enemies[3].dy = -1;
+
+}
+
+
+/* =====================================================
+   残りドット数
+   ===================================================== */
+
+function countDots() {
+
+    let count = 0;
+
+
+    for (
+        let y = 0;
+        y < dots.length;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < dots[y].length;
+            x++
+        ) {
+
+            if (dots[y][x]) {
+
+                count++;
+
+            }
+
+        }
+
+    }
+
+
+    return count;
+
+}
+
+
+/* =====================================================
+   マップ描画
+   ===================================================== */
+
+function drawMap() {
+
+
+    for (
+        let y = 0;
+        y < map.length;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < map[y].length;
+            x++
+        ) {
+
+
+            /*
+               背景
+            */
+
+            ctx.fillStyle = "#000";
+
+            ctx.fillRect(
+
+                x * TILE,
+                y * TILE,
+                TILE,
+                TILE
+
+            );
+
+
+            /*
+               壁
+            */
+
+            if (isWall(x, y)) {
+
+                ctx.fillStyle = "#123bd1";
+
+                ctx.fillRect(
+
+                    x * TILE + 2,
+                    y * TILE + 2,
+                    TILE - 4,
+                    TILE - 4
+
+                );
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   ドット描画
+   ===================================================== */
+
+function drawDots() {
+
+
+    for (
+        let y = 0;
+        y < dots.length;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < dots[y].length;
+            x++
+        ) {
+
+
+            if (!dots[y][x]) {
+
+                continue;
+
+            }
+
+
+            /*
+               パワーアイテム
+            */
+
+            if (
+                map[y][x] === "o"
+            ) {
+
+                ctx.fillStyle =
+                    powerTime > 0
+                    ? "#00ffff"
+                    : "#ffffff";
+
+
+                ctx.beginPath();
+
+
+                ctx.arc(
+
+                    x * TILE +
+                    TILE / 2,
+
+                    y * TILE +
+                    TILE / 2,
+
+                    7,
+
+                    0,
+
+                    Math.PI * 2
+
+                );
+
+
+                ctx.fill();
+
+            }
+
+
+            /*
+               普通のドット
+            */
+
+            else {
+
+                ctx.fillStyle =
+                    "#ffffff";
+
+
+                ctx.beginPath();
+
+
+                ctx.arc(
+
+                    x * TILE +
+                    TILE / 2,
+
+                    y * TILE +
+                    TILE / 2,
+
+                    3,
+
+                    0,
+
+                    Math.PI * 2
+
+                );
+
+
+                ctx.fill();
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   プレイヤー描画
+   ===================================================== */
+
+function drawPlayer() {
+
+
+    /*
+       画像が読み込まれている場合
+    */
+
+    if (
+        playerImage.complete &&
+        playerImage.naturalWidth > 0
+    ) {
+
+
+        ctx.drawImage(
+
+            playerImage,
+
+            player.x * TILE + 2,
+
+            player.y * TILE + 2,
+
+            TILE - 4,
+
+            TILE - 4
+
+        );
+
+    }
+
+
+    /*
+       画像が読み込めない場合は
+       黄色い円を表示
+    */
+
+    else {
+
+        ctx.fillStyle =
+            "#ffd900";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            player.x * TILE +
+            TILE / 2,
+
+            player.y * TILE +
+            TILE / 2,
+
+            9,
+
+            0,
+
+            Math.PI * 2
+
+        );
+
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =====================================================
+   敵描画
+   ===================================================== */
+
+function drawEnemy(enemy) {
+
+
+    ctx.fillStyle =
+        powerTime > 0
+        ? "#2222ff"
+        : enemy.color;
+
+
+    /*
+       体
+    */
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        enemy.x * TILE +
+        TILE / 2,
+
+        enemy.y * TILE +
+        TILE / 2,
+
+        9,
+
+        Math.PI,
+
+        0
+
+    );
+
+
+    ctx.lineTo(
+
+        enemy.x * TILE +
+        TILE - 3,
+
+        enemy.y * TILE +
+        TILE - 3
+
+    );
+
+
+    ctx.lineTo(
+
+        enemy.x * TILE +
+        TILE / 2,
+
+        enemy.y * TILE + 18
+
+    );
+
+
+    ctx.lineTo(
+
+        enemy.x * TILE + 3,
+
+        enemy.y * TILE +
+        TILE - 3
+
+    );
+
+
+    ctx.closePath();
+
+    ctx.fill();
+
+
+    /*
+       目
+    */
+
+    if (powerTime <= 0) {
+
+        ctx.fillStyle = "white";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+
+            enemy.x * TILE + 9,
+
+            enemy.y * TILE + 9,
+
+            3,
+
+            0,
+
+            Math.PI * 2
+
+        );
+
+        ctx.fill();
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+
+            enemy.x * TILE + 16,
+
+            enemy.y * TILE + 9,
+
+            3,
+
+            0,
+
+            Math.PI * 2
+
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =====================================================
+   全体描画
+   ===================================================== */
+
+function draw() {
+
+
+    ctx.clearRect(
+
+        0,
+        0,
+        canvas.width,
+        canvas.height
+
+    );
+
+
+    drawMap();
+
+    drawDots();
+
+
+    for (
+        const enemy of enemies
+    ) {
+
+        drawEnemy(enemy);
+
+    }
+
+
+    drawPlayer();
+
+}
+
+
+/* =====================================================
+   プレイヤー移動
+   ===================================================== */
+
+function movePlayer() {
+
+
+    /*
+       次に進みたい方向へ
+       曲がれるなら曲がる
+    */
+
+    if (
+        !isWall(
+
+            player.x +
+            player.nextDx,
+
+            player.y +
+            player.nextDy
+
+        )
+    ) {
+
+        player.dx =
+            player.nextDx;
+
+        player.dy =
+            player.nextDy;
+
+    }
+
+
+    /*
+       現在の方向へ移動できるか
+    */
+
+    const nextX =
+        player.x + player.dx;
+
+    const nextY =
+        player.y + player.dy;
+
+
+    if (
+        !isWall(nextX, nextY)
+    ) {
+
+        player.x = nextX;
+
+        player.y = nextY;
+
+    }
+
+
+    /*
+       ドットを食べる
+    */
+
+    eatDot();
+
+}
+
+
+/* =====================================================
+   ドットを食べる
+   ===================================================== */
+
+function eatDot() {
+
+
+    if (
+        !dots[player.y] ||
+        !dots[player.y][player.x]
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       食べたことにする
+    */
+
+    dots[player.y][player.x] =
+        false;
+
+
+    /*
+       パワーアイテム
+    */
+
+    if (
+        map[player.y][player.x] === "o"
+    ) {
+
+        score += 50;
+
+        powerTime = 50;
+
+        playSound(700, 0.15);
+
+    }
+
+
+    /*
+       普通のドット
+    */
+
+    else {
+
+        score += 10;
+
+        playSound(400, 0.05);
+
+    }
+
+
+    updateScore();
+
+
+    /*
+       全部食べたらクリア
+    */
+
+    if (
+        countDots() === 0
+    ) {
+
+        clearGame();
+
+    }
+
+}
+
+
+/* =====================================================
+   敵の移動
+   ===================================================== */
+
+function moveEnemy(enemy) {
+
+
+    /*
+       移動可能な方向
+    */
+
+    const directions = [
+
+        {
+            dx: 1,
+            dy: 0
+        },
+
+        {
+            dx: -1,
+            dy: 0
+        },
+
+        {
+            dx: 0,
+            dy: 1
+        },
+
+        {
+            dx: 0,
+            dy: -1
+        }
+
+    ];
+
+
+    let possible =
+        directions.filter(
+
+            direction =>
+
+                !isWall(
+
+                    enemy.x +
+                    direction.dx,
+
+                    enemy.y +
+                    direction.dy
+
+                )
+
+        );
+
+
+    /*
+       後ろに戻るだけになりにくくする
+    */
+
+    if (possible.length > 1) {
+
+        possible =
+            possible.filter(
+
+                direction =>
+
+                    !(
+                        direction.dx ===
+                        -enemy.dx &&
+
+                        direction.dy ===
+                        -enemy.dy
+                    )
+
+            );
+
+    }
+
+
+    if (possible.length === 0) {
+
+        return;
+
+    }
+
+
+    /*
+       パワー中なら逃げる
+
+       通常時はプレイヤー方向を
+       少し優先する
+    */
+
+    if (powerTime > 0) {
+
+
+        /*
+           ランダムに逃げる
+        */
+
+        const choice =
+            possible[
+                Math.floor(
+                    Math.random() *
+                    possible.length
+                )
+            ];
+
+
+        enemy.dx =
+            choice.dx;
+
+        enemy.dy =
+            choice.dy;
+
+    }
+
+    else {
+
+
+        /*
+           プレイヤーとの距離を
+           比較する
+        */
+
+        possible.sort(
+
+            (a, b) => {
+
+                const ax =
+                    enemy.x + a.dx;
+
+                const ay =
+                    enemy.y + a.dy;
+
+
+                const bx =
+                    enemy.x + b.dx;
+
+                const by =
+                    enemy.y + b.dy;
+
+
+                const distanceA =
+
+                    Math.abs(
+                        player.x - ax
+                    ) +
+
+                    Math.abs(
+                        player.y - ay
+                    );
+
+
+                const distanceB =
+
+                    Math.abs(
+                        player.x - bx
+                    ) +
+
+                    Math.abs(
+                        player.y - by
+                    );
+
+
+                /*
+                   少しランダム性を入れる
+                */
+
+                return (
+                    distanceA -
+                    distanceB +
+                    (Math.random() * 4 - 2)
+                );
+
+            }
+
+        );
+
+
+        const choice =
+            possible[0];
+
+
+        enemy.dx =
+            choice.dx;
+
+        enemy.dy =
+            choice.dy;
+
+    }
+
+
+    enemy.x += enemy.dx;
+
+    enemy.y += enemy.dy;
+
+}
+
+
+/* =====================================================
+   敵との衝突
+   ===================================================== */
+
+function checkEnemyCollision() {
+
+
+    for (
+        const enemy of enemies
+    ) {
+
+
+        if (
+
+            player.x === enemy.x &&
+
+            player.y === enemy.y
+
+        ) {
+
+
+            /*
+               パワー中
+               ↓
+               敵を食べる
+            */
+
+            if (powerTime > 0) {
+
+
+                score += enemyScore;
+
+
+                enemyScore *= 2;
+
+
+                /*
+                   敵を中央に戻す
+                */
+
+                enemy.x = 9;
+
+                enemy.y = 9;
+
+
+                playSound(
+                    900,
+                    0.2
+                );
+
+
+                updateScore();
+
+            }
+
+
+            /*
+               通常時
+               ↓
+               プレイヤーがやられる
+            */
+
+            else {
+
+                loseLife();
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   LIFE減少
+   ===================================================== */
+
+function loseLife() {
+
+
+    lives--;
+
+
+    playSound(
+        150,
+        0.4
+    );
+
+
+    updateLife();
+
+
+    /*
+       LIFEがなくなった
+    */
+
+    if (lives <= 0) {
+
+        endGame();
+
+        return;
+
+    }
+
+
+    /*
+       少し待って再配置
+    */
+
+    resetPlayer();
+
+    resetEnemies();
+
+
+    document
+        .getElementById("message")
+        .textContent =
+        "気をつけて！";
+
+}
+
+
+/* =====================================================
+   スコア更新
+   ===================================================== */
+
+function updateScore() {
+
+
+    document
+        .getElementById("score")
+        .textContent =
+        score;
+
+
+    /*
+       ハイスコア更新
+    */
+
+    if (
+        score > highScore
+    ) {
+
+        highScore = score;
+
+
+        localStorage.setItem(
+
+            "miniMazeHighScore",
+
+            highScore
+
+        );
+
+
+        document
+            .getElementById("highScore")
+            .textContent =
+            highScore;
+
+    }
+
+}
+
+
+/* =====================================================
+   LIFE表示
+   ===================================================== */
+
+function updateLife() {
+
+
+    let text = "";
+
+
+    for (
+        let i = 0;
+        i < lives;
+        i++
+    ) {
+
+        text += "❤️";
+
+    }
+
+
+    document
+        .getElementById("life")
+        .textContent =
+        text;
+
+}
+
+
+/* =====================================================
+   GAME OVER
+   ===================================================== */
+
+function endGame() {
+
+
+    gameRunning = false;
+
+    gameOver = true;
+
+
+    document
+        .getElementById("message")
+        .textContent =
+        "💀 GAME OVER";
+
+
+    playSound(
+        100,
+        0.7
+    );
+
+}
+
+
+/* =====================================================
+   CLEAR
+   ===================================================== */
+
+function clearGame() {
+
+
+    gameRunning = false;
+
+    clear = true;
+
+
+    score += 1000;
+
+
+    updateScore();
+
+
+    document
+        .getElementById("message")
+        .textContent =
+        "🏆 CLEAR! +1000 BONUS";
+
+
+    playSound(
+        1000,
+        0.3
+    );
+
+}
+
+
+/* =====================================================
+   START
+   ===================================================== */
+
+document
+    .getElementById("startButton")
+    .addEventListener(
+
+        "click",
+
+        function() {
+
+
+            score = 0;
+
+            lives = 3;
+
+            powerTime = 0;
+
+            enemyScore = 200;
+
+
+            gameOver = false;
+
+            clear = false;
+
+
+            resetPlayer();
+
+            resetEnemies();
+
+            resetDots();
+
+
+            updateScore();
+
+            updateLife();
+
+
+            gameRunning = true;
+
+
+            document
+                .getElementById("message")
+                .textContent =
+                "GO!";
+
+
+            playSound(
+                500,
+                0.1
+            );
+
+
+            draw();
+
+        }
+
+    );
+
+
+/* =====================================================
+   キーボード
+   ===================================================== */
+
+document.addEventListener(
+
+    "keydown",
+
+    function(event) {
+
+
+        /*
+           ゲーム開始前は操作しない
+        */
+
+        if (!gameRunning) {
+
+            return;
+
+        }
+
+
+        /*
+           矢印キーでスクロールするのを防ぐ
+        */
+
+        if (
+            event.key ===
+            "ArrowUp" ||
+
+            event.key ===
+            "ArrowDown" ||
+
+            event.key ===
+            "ArrowLeft" ||
+
+            event.key ===
+            "ArrowRight"
+        ) {
+
+            event.preventDefault();
+
+        }
+
+
+        if (
+            event.key ===
+            "ArrowUp"
+        ) {
+
+            player.nextDx = 0;
+
+            player.nextDy = -1;
+
+        }
+
+
+        if (
+            event.key ===
+            "ArrowDown"
+        ) {
+
+            player.nextDx = 0;
+
+            player.nextDy = 1;
+
+        }
+
+
+        if (
+            event.key ===
+            "ArrowLeft"
+        ) {
+
+            player.nextDx = -1;
+
+            player.nextDy = 0;
+
+        }
+
+
+        if (
+            event.key ===
+            "ArrowRight"
+        ) {
+
+            player.nextDx = 1;
+
+            player.nextDy = 0;
+
+        }
+
+    }
+
+);
+
+
+/* =====================================================
+   スマホ操作
+   ===================================================== */
+
+document
+    .querySelectorAll(".control")
+    .forEach(
+
+        function(button) {
+
+
+            button.addEventListener(
+
+                "click",
+
+                function() {
+
+
+                    if (!gameRunning) {
+
+                        return;
+
+                    }
+
+
+                    const direction =
+                        button.dataset.dir;
+
+
+                    if (
+                        direction === "up"
+                    ) {
+
+                        player.nextDx = 0;
+
+                        player.nextDy = -1;
+
+                    }
+
+
+                    if (
+                        direction === "down"
+                    ) {
+
+                        player.nextDx = 0;
+
+                        player.nextDy = 1;
+
+                    }
+
+
+                    if (
+                        direction === "left"
+                    ) {
+
+                        player.nextDx = -1;
+
+                        player.nextDy = 0;
+
+                    }
+
+
+                    if (
+                        direction === "right"
+                    ) {
+
+                        player.nextDx = 1;
+
+                        player.nextDy = 0;
+
+                    }
+
+                }
+
+            );
+
+        }
+
+    );
+
+
+/* =====================================================
+   ゲームループ
+   ===================================================== */
+
+setInterval(
+
+    function() {
+
+
+        if (!gameRunning) {
+
+            return;
+
+        }
+
+
+        /*
+           プレイヤー
+        */
+
+        movePlayer();
+
+
+        /*
+           敵
+
+           敵によって移動タイミングを
+           少し変える
+        */
+
+        enemies.forEach(
+
+            function(enemy) {
+
+                moveEnemy(enemy);
+
+            }
+
+        );
+
+
+        /*
+           パワー時間
+        */
+
+        if (powerTime > 0) {
+
+            powerTime--;
+
+        }
+
+
+        /*
+           敵との衝突
+        */
+
+        checkEnemyCollision();
+
+
+        /*
+           描画
+        */
+
+        draw();
+
+
+    },
+
+    180
+
+);
+
+
+/* =====================================================
+   最初の描画
+   ===================================================== */
+
+resetDots();
+
+draw();
+
+</script>
+
+</body>
+
+</html>
